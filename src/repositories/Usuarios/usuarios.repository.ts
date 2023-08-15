@@ -1,32 +1,58 @@
-import { usuarios } from '../../database';
-import { Usuario } from '../../models';
+import { Database } from '../../database';
+import { UsuarioJSON } from '../../models';
 import { CadastrarLogarUsuarioDTO } from '../../usecases';
 
 export class UsuariosRepository {
-	public verificarSeExisteUsuarioPorEmail(email: string): boolean {
-		// se existir - true
-		// se nao existir - false
-		return usuarios.some((usuario) => usuario.toJSON().email === email);
+	public async verificarSeExisteUsuarioPorEmail(email: string): Promise<boolean> {
+		const resultado = await Database.query('SELECT * FROM usuarios WHERE email = $1', [email]);
+
+		// !!0, !!undefined, !!null ou !!"" => false
+		// true
+		return !!resultado.rowCount;
 	}
 
-	public cadastrar(dados: CadastrarLogarUsuarioDTO): Usuario {
-		const novoUsuario = new Usuario(dados.email, dados.senha);
+	public async cadastrar(dados: CadastrarLogarUsuarioDTO): Promise<UsuarioJSON> {
+		const { email, senha } = dados;
+		const resultadoInsert = await Database.query('INSERT INTO usuarios (email, senha) VALUES ($1, $2)', [
+			email,
+			senha,
+		]);
+		const resultadoSelect = await Database.query('SELECT * from usuarios ORDER BY criadoEm DESC LIMIT 1');
 
-		usuarios.push(novoUsuario);
-		return novoUsuario;
+		const [ultimoInserido] = resultadoSelect.rows;
+
+		return {
+			id: ultimoInserido.id,
+			senha: ultimoInserido.senha,
+			email: ultimoInserido.email,
+		};
 	}
 
-	public autenticacaoLogin(
-		dados: CadastrarLogarUsuarioDTO
-	): Usuario | undefined {
-		return usuarios.find((usuario) => {
-			const user = usuario.toJSON();
+	public async autenticacaoLogin(dados: CadastrarLogarUsuarioDTO): Promise<UsuarioJSON | undefined> {
+		const { email, senha } = dados;
+		const resultado = await Database.query('SELECT * FROM usuarios WHERE email = $1 AND senha = $2', [
+			email,
+			senha,
+		]);
 
-			return user.email === dados.email && user.senha === dados.senha;
-		});
+		if (!resultado.rowCount) return undefined;
+
+		return {
+			id: resultado.rows[0].id,
+			email: resultado.rows[0].email,
+			senha: resultado.rows[0].senha,
+		};
 	}
 
-	public buscaUsuarioPorID(idUsuario: string): Usuario | undefined {
-		return usuarios.find((usuario) => usuario.toJSON().id === idUsuario);
+	public async buscaUsuarioPorID(idUsuario: string): Promise<UsuarioJSON | undefined> {
+		const resultado = await Database.query('SELECT * from usuarios WHERE id = $1', [idUsuario]);
+
+		if (!resultado.rowCount) return undefined;
+
+		return {
+			id: resultado.rows[0].id,
+			email: resultado.rows[0].email,
+			senha: resultado.rows[0].senha,
+		};
 	}
 }

@@ -13,15 +13,12 @@ export type RetornoCadastroLoginUsuario = {
 };
 
 export class CadastrarUsuario {
-	public execute(
-		dadosNovoUsuario: CadastrarLogarUsuarioDTO
-	): RetornoCadastroLoginUsuario {
+	public async execute(dadosNovoUsuario: CadastrarLogarUsuarioDTO): Promise<RetornoCadastroLoginUsuario> {
 		const repository = new UsuariosRepository();
 
 		// 1 - olhar para a lista de usuarios e verifica se existe um outro usuario com o mesmo email já cadastrado
-		if (
-			repository.verificarSeExisteUsuarioPorEmail(dadosNovoUsuario.email)
-		) {
+		const existe = await repository.verificarSeExisteUsuarioPorEmail(dadosNovoUsuario.email);
+		if (existe) {
 			return {
 				sucesso: false,
 				mensagem: 'Já existe um usuário cadastrado com esse e-mail.',
@@ -30,17 +27,12 @@ export class CadastrarUsuario {
 
 		// 2 - criar o novo usuario
 		// 3 - inserir o novo usuario na lista de usuarios
-		const novoUsuarioCadastrado = repository.cadastrar(dadosNovoUsuario);
-
-		const usuario = {
-			id: novoUsuarioCadastrado.toJSON().id,
-			email: novoUsuarioCadastrado.toJSON().email,
-		};
+		const novoUsuarioCadastrado = await repository.cadastrar(dadosNovoUsuario);
 
 		return {
 			sucesso: true,
 			mensagem: 'Usuário cadastrado com sucesso!',
-			dados: usuario,
+			dados: novoUsuarioCadastrado,
 		};
 	}
 }
