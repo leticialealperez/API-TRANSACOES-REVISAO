@@ -1,8 +1,8 @@
-import { Database } from '../../database';
-import { TipoTransacao, TransacaoJSON, Usuario } from '../../models';
+import { pgHelper } from '../../database';
+import { TipoTransacao, TransacaoJSON, UsuarioJSON } from '../../models';
 
 type CadastrarDTO = {
-	usuario: Usuario;
+	usuario: UsuarioJSON;
 	valor: number;
 	tipo: TipoTransacao;
 };
@@ -23,24 +23,25 @@ enum ETipo {
 	'entrada' = 1,
 	'saida' = 2,
 }
+// type KeyEnumTipo = keyof typeof ETipo;
 
 export class TransacoesRepository {
-	public async cadastrar(dados: CadastrarDTO): Promise<TransacaoJSON | undefined> {
+	public async cadastrar(dados: CadastrarDTO): Promise<TransacaoJSON> {
 		const { valor, tipo, usuario } = dados;
-		const idUsuario = usuario.toJSON().id;
+		const idUsuario = usuario.id;
 		const tipoNumero = ETipo[tipo];
 
-		await Database.query('INSERT INTO transacoes (valor, tipo, id_usuario) VALUES ($1, $2, $3)', [
+		await pgHelper.client.query('INSERT INTO transacoes (valor, tipo, id_usuario) VALUES ($1, $2, $3)', [
 			valor,
 			tipoNumero,
 			idUsuario,
 		]);
 
-		const resultado = await Database.query(
+		const resultado = await pgHelper.client.query(
 			'SELECT t.id, t.valor, t.id_usuario, t.tipo, t.criadoem, u.email FROM transacoes t INNER JOIN usuarios u ON u.id = t.id_usuario ORDER BY t.criadoEm DESC LIMIT 1'
 		);
 
-		const [ultimaTransacao] = resultado.rows;
+		const [ultimaTransacao] = resultado;
 
 		return {
 			id: ultimaTransacao.id,
@@ -54,32 +55,45 @@ export class TransacoesRepository {
 		};
 	}
 
-	public calcularSaldo(idUsuario: string): number {
-		const transacoesUsuario = transacoes.filter((transacao) => transacao.toJSON().autor.id === idUsuario);
+	public async calcularSaldo(idUsuario: string): Promise<number> {
+		const transacoesUsuario = await pgHelper.client.query('SELECT * FROM transacoes WHERE id_usuario = $1', [
+			idUsuario,
+		]);
 
 		if (!transacoesUsuario.length) return 0;
 
-		const soma = transacoesUsuario.reduce((result, transacao) => {
-			const transacaoJSON = transacao.toJSON();
-
-			if (transacaoJSON.tipo === 'entrada') {
-				return result + transacaoJSON.valor;
+		const soma = transacoesUsuario.reduce((result: number, transacao: any) => {
+			ETipo[1];
+			if (ETipo[transacao.tipo as number] === 'entrada') {
+				return result + transacao.valor;
 			} else {
-				return result - transacaoJSON.valor;
+				return result - transacao.valor;
 			}
 		}, 0);
 
 		return soma;
 	}
 
-	public listarTransacoesDeUmUsuario(idUsuario: string, filtros?: Filtros): TransacaoJSON[] {
-		return transacoes
-			.filter((transacao) => {
-				const { autor, tipo } = transacao.toJSON();
+	public async listarTransacoesDeUmUsuario(idUsuario: string, filtros?: Filtros): Promise<TransacaoJSON[]> {
+		const transacoesUsuario = await pgHelper.client.query(
+			'SELECT t.id as id_transacao, t.valor, t.tipo, t.criadoem, u.id as id_usuario, u.email FROM transacoes t INNER JOIN usuarios u ON t.id_usuario = u.id WHERE id_usuario = $1',
+			[idUsuario]
+		);
 
-				return filtros?.tipo ? autor.id === idUsuario && tipo === filtros.tipo : autor.id === idUsuario;
-			})
-			.map((t) => t.toJSON());
+		const listaTransacoesUsuario: TransacaoJSON[] = transacoesUsuario.map((v: any) => {
+			return {
+				id: v.id_transacao,
+				valor: v.valor,
+				tipo: ETipo[v.tipo],
+				criadoEm: v.criadoem,
+				autor: {
+					id: v.id_usuario,
+					email: v.email,
+				},
+			};
+		});
+
+		return listaTransacoesUsuario;
 	}
 
 	public buscarPorID(idUsuario: string, idTransacao: string): TransacaoJSON | undefined {

@@ -9,13 +9,13 @@ import {
 } from '../../usecases';
 
 export class TransacaoController {
-	public static cadastrar(req: Request, res: Response) {
+	public static async cadastrar(req: Request, res: Response) {
 		const { idUsuario } = req.params;
 		const { valor, tipo } = req.body;
 
 		// chamar as regras de negocio
 		const usecase = new CadastrarTransacao();
-		const resultado = usecase.execute({ idUsuario, tipo, valor });
+		const resultado = await usecase.execute({ idUsuario, tipo, valor });
 
 		if (!resultado.sucesso) {
 			return res.status(401).json(resultado);
