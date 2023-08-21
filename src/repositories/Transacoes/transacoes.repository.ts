@@ -41,14 +41,14 @@ export class TransacoesRepository {
 	public async cadastrar(dados: CadastrarDTO): Promise<Transacao> {
 		const { valor, tipo, idUsuario } = dados;
 
-		await pgHelper.client.query('INSERT INTO transacoes (valor, tipo, id_usuario) VALUES ($1, $2, $3)', [
+		await pgHelper.client.query(`INSERT INTO transacoes (valor, tipo, id_usuario) VALUES ($1, $2, $3)`, [
 			valor,
 			ETipo[tipo],
 			idUsuario,
 		]);
 
 		const [ultimInserido] = await pgHelper.client.query(
-			'SELECT t.id, t.valor, t.tipo, t.id_usuario, t.criadoem, u.email, u.senha FROM transacoes t INNER JOIN usuarios u ON t.id_usuario = u.id WHERE t.id_usuario = $1 ORDER BY t.criadoEm DESC LIMIT 1',
+			`SELECT t.id, t.valor, t.tipo, t.id_usuario, t.criadoem, u.email, u.senha FROM transacoes t INNER JOIN usuarios u ON t.id_usuario=u.id WHERE t.id_usuario=$1 ORDER BY t.criadoEm DESC LIMIT 1`,
 			[idUsuario]
 		);
 
@@ -56,7 +56,7 @@ export class TransacoesRepository {
 	}
 
 	public async calcularSaldo(idUsuario: string): Promise<number> {
-		const transacoesUsuario = await pgHelper.client.query('SELECT * FROM transacoes WHERE id_usuario = $1', [
+		const transacoesUsuario = await pgHelper.client.query('SELECT * FROM transacoes WHERE id_usuario=$1', [
 			idUsuario,
 		]);
 
@@ -79,7 +79,7 @@ export class TransacoesRepository {
 					FROM transacoes t 
 					INNER JOIN usuarios u 
 					ON t.id_usuario = u.id 
-					WHERE t.id_usuario = ${idUsuario} 
+					WHERE t.id_usuario = $1 
 				  `;
 
 		if (filtros) {
@@ -96,21 +96,20 @@ export class TransacoesRepository {
 			}
 		}
 
-		const transacoesUsuario = await pgHelper.client.query(sql);
+		const transacoesUsuario = await pgHelper.client.query(sql, [idUsuario]);
 
 		return transacoesUsuario.map((row: any) => this.entityToModel(row));
 	}
 
 	public async buscarPorID(idUsuario: string, idTransacao: string): Promise<Transacao | undefined> {
 		const [transacaoEncontrada] = await pgHelper.client.query(
-			`	SELECT t.id, t.valor, t.tipo, t.criadoem, t.id_usuario, u.email, u.senha 
-				FROM transacoes t 
-				INNER JOIN usuarios u 
-				ON t.id_usuario = u.id 
-				WHERE t.id_usuario = $1
-				AND t.id =  $2
-			`,
-			[idUsuario, idTransacao]
+			`SELECT t.id, t.valor, t.tipo, t.criadoem, t.id_usuario, u.email, u.senha 
+			FROM transacoes t 
+			INNER JOIN usuarios u 
+			ON t.id_usuario = u.id 
+			WHERE t.id_usuario=${idUsuario}
+			AND t.id=${idTransacao}
+			`
 		);
 
 		if (!transacaoEncontrada) return undefined;
@@ -134,7 +133,8 @@ export class TransacoesRepository {
 	// TRANSFORMA RESULTADO DA BUSCA EM UMA INSTANCIA DA MODEL
 	private entityToModel(dadosDB: DadosDBTransacao): Transacao {
 		const usuario = new Usuario(dadosDB.id, dadosDB.email, dadosDB.senha);
+		const transacao = new Transacao(dadosDB.id, dadosDB.valor, ETipo[dadosDB.tipo] as KeyEnumTipo, usuario);
 
-		return new Transacao(dadosDB.id, dadosDB.valor, ETipo[dadosDB.tipo] as KeyEnumTipo, usuario);
+		return transacao;
 	}
 }

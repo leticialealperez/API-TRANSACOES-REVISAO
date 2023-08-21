@@ -41,6 +41,7 @@ export class CadastrarTransacao {
 		});
 
 		const somaTransacoes = await repositoryTransacoes.calcularSaldo(dados.idUsuario);
+		console.log(somaTransacoes);
 		const transacoesUsuario = await repositoryTransacoes.listarTransacoesDeUmUsuario(dados.idUsuario);
 
 		return {
