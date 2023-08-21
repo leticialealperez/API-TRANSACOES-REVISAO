@@ -62,7 +62,6 @@ export class AtualizarTransacao {
 
 		repositoryTransacao.atualizarTransacao({
 			idTransacao,
-			idUsuario,
 			criadoem: transacaoJSON.criadoEm,
 			tipo: ETipo[transacaoJSON.tipo],
 			valor: transacaoJSON.valor,

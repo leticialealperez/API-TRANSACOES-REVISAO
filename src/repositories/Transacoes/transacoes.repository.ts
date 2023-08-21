@@ -15,7 +15,6 @@ type Filtros = {
 
 type AtualizarDTO = {
 	idTransacao: string;
-	idUsuario: string;
 	valor: number;
 	tipo: number;
 	criadoem: Date;
@@ -107,9 +106,10 @@ export class TransacoesRepository {
 			FROM transacoes t 
 			INNER JOIN usuarios u 
 			ON t.id_usuario = u.id 
-			WHERE t.id_usuario=${idUsuario}
-			AND t.id=${idTransacao}
-			`
+			WHERE t.id_usuario=$1
+			AND t.id=$2
+			`,
+			[idUsuario, idTransacao]
 		);
 
 		if (!transacaoEncontrada) return undefined;
@@ -118,16 +118,19 @@ export class TransacoesRepository {
 	}
 
 	public async atualizarTransacao(dados: AtualizarDTO): Promise<void> {
-		await pgHelper.client.query(`UPDATE transacoes SET 
-										valor=${dados.valor}
-										tipo=${dados.tipo}
-										criadoem=${dados.criadoem}
-									WHERE id = ${dados.idTransacao}
-									`);
+		const { criadoem, valor, tipo, idTransacao } = dados;
+		await pgHelper.client.query(
+			`UPDATE transacoes SET 
+				valor=$1
+				tipo=$2
+				criadoem=$3
+			WHERE id=$4`,
+			[valor, tipo, criadoem, idTransacao]
+		);
 	}
 
 	public async deletarTransacao(idTransacao: string): Promise<void> {
-		await pgHelper.client.query(`DELETE FROM transacoes WHERE id = ${idTransacao}`);
+		await pgHelper.client.query(`DELETE FROM transacoes WHERE id=$1`, [idTransacao]);
 	}
 
 	// TRANSFORMA RESULTADO DA BUSCA EM UMA INSTANCIA DA MODEL
