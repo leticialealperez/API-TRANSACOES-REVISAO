@@ -7,30 +7,25 @@ type ListarPorIdDTO = {
 };
 
 export class ListarPorID {
-	public execute(dados: ListarPorIdDTO): RetornoTransacoes {
+	public async execute(dados: ListarPorIdDTO): Promise<RetornoTransacoes> {
 		const { idUsuario, idTransacao } = dados;
 
 		const repositoryUsuario = new UsuariosRepository();
 		const repositoryTransacao = new TransacoesRepository();
 
-		const usuarioEncontrado =
-			repositoryUsuario.buscaUsuarioPorID(idUsuario);
+		const usuarioEncontrado = await repositoryUsuario.buscaUsuarioPorID(idUsuario);
 
 		if (!usuarioEncontrado) {
 			return {
 				sucesso: false,
-				mensagem:
-					'Usuário não encontrado. Não foi possível listar a transação.',
+				mensagem: 'Usuário não encontrado. Não foi possível listar a transação.',
 				dados: {
 					saldo: 0,
 				},
 			};
 		}
 
-		const transacao = repositoryTransacao.buscarPorID(
-			idUsuario,
-			idTransacao
-		);
+		const transacao = await repositoryTransacao.buscarPorID(idUsuario, idTransacao);
 
 		if (!transacao) {
 			return {
@@ -42,14 +37,14 @@ export class ListarPorID {
 			};
 		}
 
-		const saldo = repositoryTransacao.calcularSaldo(idUsuario);
+		const saldo = await repositoryTransacao.calcularSaldo(idUsuario);
 
 		return {
 			sucesso: true,
 			mensagem: 'Transação buscada com sucesso',
 			dados: {
 				saldo,
-				transacao,
+				transacao: transacao.toJSON(),
 			},
 		};
 	}

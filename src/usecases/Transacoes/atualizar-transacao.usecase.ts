@@ -1,6 +1,6 @@
 import { RetornoTransacoes } from '..';
 import { TipoTransacao } from '../../models';
-import { TransacoesRepository, UsuariosRepository } from '../../repositories';
+import { ETipo, TransacoesRepository, UsuariosRepository } from '../../repositories';
 
 type AtualizarTransacaoDTO = {
 	idUsuario: string;
@@ -8,34 +8,30 @@ type AtualizarTransacaoDTO = {
 	novosDados: {
 		valor?: number;
 		tipo?: TipoTransacao;
+		criadoEm?: Date;
 	};
 };
 
 export class AtualizarTransacao {
-	public execute(dados: AtualizarTransacaoDTO): RetornoTransacoes {
+	public async execute(dados: AtualizarTransacaoDTO): Promise<RetornoTransacoes> {
 		const { idUsuario, idTransacao, novosDados } = dados;
 
 		const repositoryUsuario = new UsuariosRepository();
 		const repositoryTransacao = new TransacoesRepository();
 
-		const usuarioEncontrado =
-			repositoryUsuario.buscaUsuarioPorID(idUsuario);
+		const usuarioEncontrado = await repositoryUsuario.buscaUsuarioPorID(idUsuario);
 
 		if (!usuarioEncontrado) {
 			return {
 				sucesso: false,
-				mensagem:
-					'Usuário não encontrado. Não foi possível atualizar a transação.',
+				mensagem: 'Usuário não encontrado. Não foi possível atualizar a transação.',
 				dados: {
 					saldo: 0,
 				},
 			};
 		}
 
-		const transacao = repositoryTransacao.buscarPorID(
-			idUsuario,
-			idTransacao
-		);
+		const transacao = await repositoryTransacao.buscarPorID(idUsuario, idTransacao);
 
 		if (!transacao) {
 			return {
@@ -47,20 +43,39 @@ export class AtualizarTransacao {
 			};
 		}
 
-		const transacaoAtualizada = repositoryTransacao.atualizarTransacao({
-			idTransacao,
-			tipo: novosDados.tipo,
+		const atualizada = transacao.atualizarDetalhes({
 			valor: novosDados.valor,
+			tipo: novosDados.tipo,
+			criadoEm: novosDados.criadoEm,
 		});
 
-		const saldo = repositoryTransacao.calcularSaldo(idUsuario);
+		if (!atualizada) {
+			return {
+				sucesso: false,
+				mensagem: 'Transação não pode ser atualizada. Valor para transação não pode ser menor que zero.',
+				dados: {
+					saldo: 0,
+				},
+			};
+		}
+		const transacaoJSON = transacao.toJSON();
+
+		repositoryTransacao.atualizarTransacao({
+			idTransacao,
+			idUsuario,
+			criadoem: transacaoJSON.criadoEm,
+			tipo: ETipo[transacaoJSON.tipo],
+			valor: transacaoJSON.valor,
+		});
+
+		const saldo = await repositoryTransacao.calcularSaldo(idUsuario);
 
 		return {
 			sucesso: true,
 			mensagem: 'Transação atualizada com sucesso',
 			dados: {
 				saldo,
-				transacao: transacaoAtualizada,
+				transacao: transacaoJSON,
 			},
 		};
 	}

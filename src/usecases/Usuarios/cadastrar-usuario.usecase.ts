@@ -9,14 +9,14 @@ export type CadastrarLogarUsuarioDTO = {
 export type RetornoCadastroLoginUsuario = {
 	sucesso: boolean;
 	mensagem: string;
-	dados?: Omit<UsuarioJSON, 'senha'>;
+	dados?: UsuarioJSON;
 };
 
 export class CadastrarUsuario {
 	public async execute(dadosNovoUsuario: CadastrarLogarUsuarioDTO): Promise<RetornoCadastroLoginUsuario> {
 		const repository = new UsuariosRepository();
 
-		// 1 - olhar para a lista de usuarios e verifica se existe um outro usuario com o mesmo email já cadastrado
+		// 1 - verifica se existe um outro usuario com o mesmo email já cadastrado
 		const existe = await repository.verificarSeExisteUsuarioPorEmail(dadosNovoUsuario.email);
 		if (existe) {
 			return {
@@ -26,13 +26,12 @@ export class CadastrarUsuario {
 		}
 
 		// 2 - criar o novo usuario
-		// 3 - inserir o novo usuario na lista de usuarios
 		const novoUsuarioCadastrado = await repository.cadastrar(dadosNovoUsuario);
 
 		return {
 			sucesso: true,
 			mensagem: 'Usuário cadastrado com sucesso!',
-			dados: novoUsuarioCadastrado,
+			dados: novoUsuarioCadastrado.toJSON(),
 		};
 	}
 }

@@ -5,7 +5,7 @@ export type TipoTransacao = 'entrada' | 'saida';
 type AtualizarTransacaoDTO = {
 	valor?: number;
 	tipo?: TipoTransacao;
-	dataLancamento?: Date;
+	criadoEm?: Date;
 };
 
 export type TransacaoJSON = {
@@ -13,19 +13,15 @@ export type TransacaoJSON = {
 	valor: number;
 	tipo: TipoTransacao;
 	criadoEm: Date;
-	autor: Omit<UsuarioJSON, 'senha'>;
+	autor: UsuarioJSON;
 };
 
 export class Transacao extends Base {
-	private _dataLancamento: Date;
+	private _criadoEm: Date;
 
-	constructor(
-		private _valor: number,
-		private _tipo: TipoTransacao,
-		private _autor: Usuario
-	) {
-		super();
-		this._dataLancamento = new Date();
+	constructor(id: string, private _valor: number, private _tipo: TipoTransacao, private _autor: Usuario) {
+		super(id);
+		this._criadoEm = new Date();
 	}
 
 	public toJSON(): TransacaoJSON {
@@ -33,11 +29,8 @@ export class Transacao extends Base {
 			id: this._id,
 			valor: this._valor,
 			tipo: this._tipo,
-			criadoEm: this._dataLancamento,
-			autor: {
-				id: this._autor.toJSON().id,
-				email: this._autor.toJSON().email,
-			},
+			criadoEm: this._criadoEm,
+			autor: this._autor.toJSON(),
 		};
 	}
 
@@ -54,8 +47,8 @@ export class Transacao extends Base {
 			this._tipo = novasInfos.tipo;
 		}
 
-		if (novasInfos.dataLancamento) {
-			this._dataLancamento = novasInfos.dataLancamento;
+		if (novasInfos.criadoEm) {
+			this._criadoEm = novasInfos.criadoEm;
 		}
 
 		return true;
@@ -67,6 +60,6 @@ export class Transacao extends Base {
 - id
 - valor: number
 - tipo: 'entrada' | 'saida'
-- dataLancamento: Date
+- criadoEm: Date
 
 */

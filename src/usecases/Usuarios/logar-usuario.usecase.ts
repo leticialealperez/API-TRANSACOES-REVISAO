@@ -17,7 +17,7 @@ export class LogarUsuario {
 		return {
 			sucesso: true,
 			mensagem: 'Usuário autorizado.',
-			dados: usuarioEncontrado,
+			dados: usuarioEncontrado.toJSON(),
 		};
 	}
 }

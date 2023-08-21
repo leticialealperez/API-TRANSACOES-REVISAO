@@ -24,13 +24,13 @@ export class TransacaoController {
 		return res.status(200).json(resultado);
 	}
 
-	public static listarTodas(req: Request, res: Response) {
+	public static async listarTodas(req: Request, res: Response) {
 		const { tipo } = req.query;
 		const { idUsuario } = req.params;
 
 		// regra de negocio
 		const usecase = new ListarTransacoes();
-		const resultado = usecase.execute({
+		const resultado = await usecase.execute({
 			idUsuario,
 			tipo: tipo as TipoTransacao | undefined,
 		});
@@ -42,12 +42,12 @@ export class TransacaoController {
 		return res.status(200).json(resultado);
 	}
 
-	public static listarPorID(req: Request, res: Response) {
+	public static async listarPorID(req: Request, res: Response) {
 		const { idUsuario, idTransacao } = req.params;
 
 		// regra de negocio
 		const usecase = new ListarPorID();
-		const resultado = usecase.execute({
+		const resultado = await usecase.execute({
 			idUsuario,
 			idTransacao,
 		});
@@ -59,16 +59,16 @@ export class TransacaoController {
 		return res.status(200).json(resultado);
 	}
 
-	public static atualizar(req: Request, res: Response) {
+	public static async atualizar(req: Request, res: Response) {
 		const { idUsuario, idTransacao } = req.params;
-		const { tipo, valor } = req.body;
+		const { tipo, valor, criadoEm } = req.body;
 
 		// regra de negocio
 		const usecase = new AtualizarTransacao();
-		const resultado = usecase.execute({
+		const resultado = await usecase.execute({
 			idUsuario,
 			idTransacao,
-			novosDados: { tipo, valor },
+			novosDados: { tipo, valor, criadoEm },
 		});
 
 		if (!resultado.sucesso) {
@@ -78,12 +78,12 @@ export class TransacaoController {
 		return res.status(200).json(resultado);
 	}
 
-	public static deletar(req: Request, res: Response) {
+	public static async deletar(req: Request, res: Response) {
 		const { idUsuario, idTransacao } = req.params;
 
 		// regra de negocio
 		const usecase = new DeletarTransacao();
-		const resultado = usecase.execute({
+		const resultado = await usecase.execute({
 			idUsuario,
 			idTransacao,
 		});

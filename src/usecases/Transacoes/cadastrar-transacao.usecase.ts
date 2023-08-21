@@ -35,7 +35,7 @@ export class CadastrarTransacao {
 
 		const repositoryTransacoes = new TransacoesRepository();
 		const transacaoCriada = await repositoryTransacoes.cadastrar({
-			usuario: usuarioEncontrado,
+			idUsuario: dados.idUsuario,
 			tipo: dados.tipo,
 			valor: dados.valor,
 		});
@@ -48,8 +48,8 @@ export class CadastrarTransacao {
 			mensagem: 'Transação cadastrada com sucesso',
 			dados: {
 				saldo: somaTransacoes,
-				transacao: transacaoCriada,
-				transacoes: transacoesUsuario,
+				transacao: transacaoCriada.toJSON(),
+				transacoes: transacoesUsuario.map((t) => t.toJSON()),
 			},
 		};
 	}

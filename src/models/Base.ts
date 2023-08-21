@@ -1,11 +1,5 @@
-import { randomUUID } from 'crypto';
-
 export abstract class Base {
-	protected _id: string;
-
-	constructor() {
-		this._id = randomUUID();
-	}
+	constructor(protected _id: string) {}
 
 	public toJSON() {
 		// a lógica de execução vai ficar nas subclasses

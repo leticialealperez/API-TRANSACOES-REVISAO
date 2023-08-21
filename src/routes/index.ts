@@ -6,17 +6,14 @@ import {
 	validarTipoTransacao,
 	validarValorETipoTransacao,
 } from '../middlewares';
+import { validarDataTransacao } from '../middlewares/Transacoes/validaDataTransacao';
 
 const app = express.Router(); // essa linha adiciona
 
 app.get('/', (req, res) => res.status(200).json({ message: 'OK' }));
 
 // USUARIOS
-app.post(
-	'/usuarios/cadastro',
-	validarDadosUsuario,
-	UsuariosController.cadastrar
-);
+app.post('/usuarios/cadastro', validarDadosUsuario, UsuariosController.cadastrar);
 app.post('/usuarios/login', validarDadosUsuario, UsuariosController.logar);
 
 // TRANSAÇÕES
@@ -26,23 +23,14 @@ app.post(
 	validarValorETipoTransacao,
 	TransacaoController.cadastrar
 );
-app.get(
-	'/usuarios/:idUsuario/transacoes',
-	validarTipoTransacao,
-	TransacaoController.listarTodas
-);
-app.get(
-	'/usuarios/:idUsuario/transacoes/:idTransacao',
-	TransacaoController.listarPorID
-);
+app.get('/usuarios/:idUsuario/transacoes', validarTipoTransacao, TransacaoController.listarTodas);
+app.get('/usuarios/:idUsuario/transacoes/:idTransacao', TransacaoController.listarPorID);
 app.put(
 	'/usuarios/:idUsuario/transacoes/:idTransacao',
 	validarValorETipoTransacao,
+	validarDataTransacao,
 	TransacaoController.atualizar
 );
-app.delete(
-	'/usuarios/:idUsuario/transacoes/:idTransacao',
-	TransacaoController.deletar
-);
+app.delete('/usuarios/:idUsuario/transacoes/:idTransacao', TransacaoController.deletar);
 
 export default app; // essa linha adiciona

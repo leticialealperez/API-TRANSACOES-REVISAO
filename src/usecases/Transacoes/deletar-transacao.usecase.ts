@@ -7,30 +7,25 @@ type DeletarTransacaoDTO = {
 };
 
 export class DeletarTransacao {
-	public execute(dados: DeletarTransacaoDTO): RetornoTransacoes {
+	public async execute(dados: DeletarTransacaoDTO): Promise<RetornoTransacoes> {
 		const { idUsuario, idTransacao } = dados;
 
 		const repositoryUsuario = new UsuariosRepository();
 		const repositoryTransacao = new TransacoesRepository();
 
-		const usuarioEncontrado =
-			repositoryUsuario.buscaUsuarioPorID(idUsuario);
+		const usuarioEncontrado = await repositoryUsuario.buscaUsuarioPorID(idUsuario);
 
 		if (!usuarioEncontrado) {
 			return {
 				sucesso: false,
-				mensagem:
-					'Usuário não encontrado. Não foi possível deletar a transação.',
+				mensagem: 'Usuário não encontrado. Não foi possível deletar a transação.',
 				dados: {
 					saldo: 0,
 				},
 			};
 		}
 
-		const transacao = repositoryTransacao.buscarPorID(
-			idUsuario,
-			idTransacao
-		);
+		const transacao = await repositoryTransacao.buscarPorID(idUsuario, idTransacao);
 
 		if (!transacao) {
 			return {
@@ -42,17 +37,16 @@ export class DeletarTransacao {
 			};
 		}
 
-		const transacaoDeletada =
-			repositoryTransacao.deletarTransacao(idTransacao);
+		await repositoryTransacao.deletarTransacao(idTransacao);
 
-		const saldo = repositoryTransacao.calcularSaldo(idUsuario);
+		const saldo = await repositoryTransacao.calcularSaldo(idUsuario);
 
 		return {
 			sucesso: true,
 			mensagem: 'Transação deletada com sucesso',
 			dados: {
 				saldo,
-				transacao: transacaoDeletada,
+				transacao: transacao.toJSON(),
 			},
 		};
 	}
