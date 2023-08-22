@@ -11,6 +11,7 @@ const configuracoes: DataSourceOptions = {
 	// database: process.env.DB_DATABASE,
 	synchronize: false,
 	logging: false,
+	entities: ['src/database/entities/**/*'],
 	ssl: {
 		rejectUnauthorized: false,
 	},
