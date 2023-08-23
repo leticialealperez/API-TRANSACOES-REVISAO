@@ -1,5 +1,6 @@
-import { BeforeInsert, Column, Entity, JoinColumn, OneToOne, PrimaryColumn } from 'typeorm';
+import { BeforeInsert, Column, Entity, JoinColumn, OneToMany, OneToOne, PrimaryColumn } from 'typeorm';
 import { EnderecoEntity } from './endereco.entity';
+import { TransacaoEntity } from './transacao.entity';
 
 // PADRÃO => active records
 // @Entity({ name: 'usuarios' })
@@ -37,9 +38,15 @@ export class UsuarioEntity {
 	@Column({ name: 'criadoem' })
 	criadoEm!: Date;
 
-	@OneToOne(() => EnderecoEntity)
+	@Column({ name: 'id_endereco', nullable: true })
+	idEndereco!: string | null;
+
+	@OneToOne(() => EnderecoEntity) // { eager: true }
 	@JoinColumn({ name: 'id_endereco', foreignKeyConstraintName: 'fk_enderecos', referencedColumnName: 'id' })
 	endereco?: EnderecoEntity;
+
+	@OneToMany(() => TransacaoEntity, (transacao) => transacao.usuario)
+	transacoes!: TransacaoEntity[];
 
 	@BeforeInsert()
 	beforeInsert() {
