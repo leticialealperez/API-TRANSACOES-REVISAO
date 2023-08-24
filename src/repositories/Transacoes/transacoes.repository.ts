@@ -1,4 +1,6 @@
+import { Between, FindOptionsWhere, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { pgHelper } from '../../database';
+import { TransacaoEntity } from '../../database/entities/transacao.entity';
 import { TipoTransacao, Transacao, Usuario } from '../../models';
 
 type CadastrarDTO = {
@@ -37,33 +39,33 @@ interface DadosDBTransacao {
 }
 
 export class TransacoesRepository {
-	public async cadastrar(dados: CadastrarDTO): Promise<Transacao> {
+	constructor(private _manager = pgHelper.client.manager) {}
+
+	public async cadastrar(dados: CadastrarDTO): Promise<void> {
 		const { valor, tipo, idUsuario } = dados;
 
-		await pgHelper.client.query(`INSERT INTO transacoes (valor, tipo, id_usuario) VALUES ($1, $2, $3)`, [
-			valor,
-			ETipo[tipo],
+		const transacaoEntity = this._manager.create(TransacaoEntity, {
 			idUsuario,
-		]);
+			tipo: ETipo[tipo],
+			valor,
+		});
 
-		const [ultimInserido] = await pgHelper.client.query(
-			`SELECT t.id, t.valor, t.tipo, t.id_usuario, t.criadoem, u.email, u.senha FROM transacoes t INNER JOIN usuarios u ON t.id_usuario=u.id WHERE t.id_usuario=$1 ORDER BY t.criadoEm DESC LIMIT 1`,
-			[idUsuario]
-		);
+		const novaTransacao = await this._manager.save(transacaoEntity);
 
-		return this.entityToModel(ultimInserido);
+		// return this.entityToModel(ultimInserido);
 	}
 
 	public async calcularSaldo(idUsuario: string): Promise<number> {
-		const transacoesUsuario = await pgHelper.client.query('SELECT * FROM transacoes WHERE id_usuario=$1', [
-			idUsuario,
-		]);
+		const transacoesUsuario = await this._manager.find(TransacaoEntity, {
+			where: {
+				idUsuario,
+			},
+		});
 
 		if (!transacoesUsuario.length) return 0;
 
-		const soma = transacoesUsuario.reduce((result: number, transacao: any) => {
-			ETipo[1];
-			if (ETipo[transacao.tipo as number] === 'entrada') {
+		const soma = transacoesUsuario.reduce((result, transacao) => {
+			if (ETipo[transacao.tipo] === 'entrada') {
 				return result + transacao.valor;
 			} else {
 				return result - transacao.valor;
@@ -74,43 +76,48 @@ export class TransacoesRepository {
 	}
 
 	public async listarTransacoesDeUmUsuario(idUsuario: string, filtros?: Filtros): Promise<Transacao[]> {
-		let sql = `	SELECT t.id, t.valor, t.tipo, t.criadoem, t.id_usuario, u.email, u.senha 
-					FROM transacoes t 
-					INNER JOIN usuarios u 
-					ON t.id_usuario = u.id 
-					WHERE t.id_usuario = $1 
-				  `;
+		const clausula: FindOptionsWhere<TransacaoEntity> = {
+			idUsuario,
+		};
 
 		if (filtros) {
 			if (filtros.tipo) {
-				sql += ` AND t.tipo = ${ETipo[filtros.tipo]}`;
+				clausula.tipo = ETipo[filtros.tipo];
 			}
 
 			if (filtros.valorMin) {
-				sql += ` AND t.valor >= ${filtros.valorMin}`;
+				clausula.valor = MoreThanOrEqual(filtros.valorMin);
 			}
 
 			if (filtros.valorMax) {
-				sql += ` AND t.valor <= ${filtros.valorMax}`;
+				clausula.valor = LessThanOrEqual(filtros.valorMax);
+			}
+
+			if (filtros.valorMin && filtros.valorMax) {
+				clausula.valor = Between(filtros.valorMin, filtros.valorMax);
 			}
 		}
 
-		const transacoesUsuario = await pgHelper.client.query(sql, [idUsuario]);
+		const listaFiltrada = await this._manager.find(TransacaoEntity, {
+			where: clausula,
+			relations: {
+				usuario: true,
+			},
+		});
 
-		return transacoesUsuario.map((row: any) => this.entityToModel(row));
+		return listaFiltrada.map((row) => this.entityToModel(row));
 	}
 
 	public async buscarPorID(idUsuario: string, idTransacao: string): Promise<Transacao | undefined> {
-		const [transacaoEncontrada] = await pgHelper.client.query(
-			`SELECT t.id, t.valor, t.tipo, t.criadoem, t.id_usuario, u.email, u.senha 
-			FROM transacoes t 
-			INNER JOIN usuarios u 
-			ON t.id_usuario = u.id 
-			WHERE t.id_usuario=$1
-			AND t.id=$2
-			`,
-			[idUsuario, idTransacao]
-		);
+		const transacaoEncontrada = await this._manager.findOne(TransacaoEntity, {
+			where: {
+				id: idTransacao,
+				idUsuario,
+			},
+			relations: {
+				usuario: true,
+			},
+		});
 
 		if (!transacaoEncontrada) return undefined;
 
@@ -119,23 +126,21 @@ export class TransacoesRepository {
 
 	public async atualizarTransacao(dados: AtualizarDTO): Promise<void> {
 		const { criadoem, valor, tipo, idTransacao } = dados;
-		await pgHelper.client.query(
-			`UPDATE transacoes SET 
-				valor=$1
-				tipo=$2
-				criadoem=$3
-			WHERE id=$4`,
-			[valor, tipo, criadoem, idTransacao]
-		);
+		await this._manager.update(TransacaoEntity, { id: idTransacao }, { valor, tipo, criadoEm: criadoem });
 	}
 
 	public async deletarTransacao(idTransacao: string): Promise<void> {
-		await pgHelper.client.query(`DELETE FROM transacoes WHERE id=$1`, [idTransacao]);
+		await this._manager.delete(TransacaoEntity, {
+			where: {
+				id: idTransacao,
+			},
+		});
 	}
 
 	// TRANSFORMA RESULTADO DA BUSCA EM UMA INSTANCIA DA MODEL
-	private entityToModel(dadosDB: DadosDBTransacao): Transacao {
-		const usuario = new Usuario(dadosDB.id, dadosDB.email, dadosDB.senha);
+	private entityToModel(dadosDB: TransacaoEntity): Transacao {
+		const usuario = new Usuario(dadosDB.usuario.id, dadosDB.usuario.email, dadosDB.usuario.senha);
+
 		const transacao = new Transacao(dadosDB.id, dadosDB.valor, ETipo[dadosDB.tipo] as KeyEnumTipo, usuario);
 
 		return transacao;
